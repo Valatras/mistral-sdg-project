@@ -7,7 +7,18 @@ authors = [
     { name = "Valatras", email = "arifcan091@gmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "ecologits>=0.11.3",
+    "huggingface-hub>=2.4.0",
+    "ipykernel>=7.4.0",
+    "jinja2>=3.1.6",
+    "mistral-common>=1.13.1",
+    "mistralai>=3.7.0",
+    "openai-harmony>=0.0.8",
+    "pandas>=3.1.1",
+    "python-dotenv>=1.2.4",
+    "transformers>=5.22.1",
+]
 
 [project.scripts]
 mistral-sdg-project = "mistral_sdg_project:main"
