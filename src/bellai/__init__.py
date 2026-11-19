@@ -1,2 +1,2 @@
 def main() -> None:
-    print("Hello from mistral-sdg-project!")
+    print("Hello from BellAI!")

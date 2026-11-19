@@ -1,7 +1,7 @@
 [project]
-name = "mistral-sdg-project"
+name = "bellai"
 version = "0.1.0"
-description = "Add your description here"
+description = "Multi-agent legal AI assistant for Belgian employment law"
 readme = "README.md"
 authors = [
     { name = "Valatras", email = "arifcan091@gmail.com" }
@@ -21,8 +21,11 @@ dependencies = [
 ]
 
 [project.scripts]
-mistral-sdg-project = "mistral_sdg_project:main"
+bellai = "bellai:main"
+bellai-main = "bellai.main:main"
 
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
+
+

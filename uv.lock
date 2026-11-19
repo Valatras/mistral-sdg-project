@@ -66,6 +66,37 @@ wheels = [
 ]
 
 [[package]]
+name = "bellai"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "ecologits" },
+    { name = "huggingface-hub" },
+    { name = "ipykernel" },
+    { name = "jinja2" },
+    { name = "mistral-common" },
+    { name = "mistralai" },
+    { name = "openai-harmony" },
+    { name = "pandas" },
+    { name = "python-dotenv" },
+    { name = "transformers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ecologits", specifier = ">=0.11.3" },
+    { name = "huggingface-hub", specifier = ">=2.4.0" },
+    { name = "ipykernel", specifier = ">=7.4.0" },
+    { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "mistral-common", specifier = ">=1.13.1" },
+    { name = "mistralai", specifier = ">=3.7.0" },
+    { name = "openai-harmony", specifier = ">=0.0.8" },
+    { name = "pandas", specifier = ">=3.1.1" },
+    { name = "python-dotenv", specifier = ">=1.2.4" },
+    { name = "transformers", specifier = ">=5.22.1" },
+]
+
+[[package]]
 name = "certifi"
 version = "2026.10.23"
 source = { registry = "https://pypi.org/simple" }
@@ -694,37 +725,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/be/1b/a0b95fe6ec635e8f3579cc680f7e2b414c49152852aed4b22e54e92ca748/mistral_common-1.13.1.tar.gz", hash = "sha256:ad8d5b7e866e907925e31274c314fdaa7f7c45a0a43e7d2f543fd7fe65ddcea9", size = 6420824, upload-time = "2026-11-02T20:05:17.15Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e5/9c/58411e76b2bdd31a012a756dd0d13a624669cdd728e8966d709113d0d437/mistral_common-1.13.1-py3-none-any.whl", hash = "sha256:98b4d0755b8d90bf4691fa8f1b70cb3b4a8cd4dc1653c4ed08ef3d1c7d2c29af", size = 6589302, upload-time = "2026-11-02T20:05:14.753Z" },
-]
-
-[[package]]
-name = "mistral-sdg-project"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "ecologits" },
-    { name = "huggingface-hub" },
-    { name = "ipykernel" },
-    { name = "jinja2" },
-    { name = "mistral-common" },
-    { name = "mistralai" },
-    { name = "openai-harmony" },
-    { name = "pandas" },
-    { name = "python-dotenv" },
-    { name = "transformers" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "ecologits", specifier = ">=0.11.3" },
-    { name = "huggingface-hub", specifier = ">=2.4.0" },
-    { name = "ipykernel", specifier = ">=7.4.0" },
-    { name = "jinja2", specifier = ">=3.1.6" },
-    { name = "mistral-common", specifier = ">=1.13.1" },
-    { name = "mistralai", specifier = ">=3.7.0" },
-    { name = "openai-harmony", specifier = ">=0.0.8" },
-    { name = "pandas", specifier = ">=3.1.1" },
-    { name = "python-dotenv", specifier = ">=1.2.4" },
-    { name = "transformers", specifier = ">=5.22.1" },
 ]
 
 [[package]]
