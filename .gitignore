@@ -17,3 +17,6 @@ Notebooks/
 
 # macOS
 .DS_Store
+
+# Generated local RAG index
+.bellai/
