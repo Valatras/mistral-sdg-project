@@ -1,5 +1,6 @@
 """Graphe LangGraph de l'intake agent : extraction → validation → (clarification) → router."""
 
+import os
 from typing import Annotated, Any, Callable, TypedDict
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -38,9 +39,52 @@ def default_extracteur(model: str = "mistral-small-latest") -> Extracteur:
     return structured.invoke
 
 
+def claude_extracteur(model: str = "claude-haiku-5-5") -> Extracteur:
+    """Extracteur Claude (lit ANTHROPIC_API_KEY dans l'environnement)."""
+    import anthropic
+
+    client = anthropic.Anthropic()
+    ROLES = {"human": "user", "user": "user", "ai": "assistant", "assistant": "assistant"}
+
+    def extraire(messages: list) -> CaseFile:
+        # Le graphe envoie [("system", prompt), *messages LangChain] : on convertit au format Claude
+        system, history = "", []
+        for m in messages:
+            role, content = m if isinstance(m, tuple) else (m.type, m.content)
+            if role == "system":
+                system = content
+            else:
+                history.append({"role": ROLES[role], "content": content})
+
+        response = client.messages.parse(
+            model=model,
+            max_tokens=16000,
+            system=system,
+            messages=history,
+            output_format=CaseFile,              # validé contre ton schéma Pydantic
+            output_config={"effort": "low"},     # extraction simple : peu de réflexion nécessaire
+        )
+        if response.stop_reason == "refusal":
+            raise RuntimeError("Claude a refusé la requête")
+        return response.parsed_output
+
+    return extraire
+
+
+FOURNISSEURS = {"mistral": default_extracteur, "claude": claude_extracteur}
+
+
+def extracteur_pour(fournisseur: str | None = None) -> Extracteur:
+    """Extracteur du fournisseur demandé, sinon INTAKE_PROVIDER, sinon Mistral."""
+    nom = (fournisseur or os.getenv("INTAKE_PROVIDER") or "mistral").lower()
+    if nom not in FOURNISSEURS:
+        raise ValueError(f"Fournisseur inconnu : {nom!r} (choix : {', '.join(FOURNISSEURS)})")
+    return FOURNISSEURS[nom]()
+
+
 def build_graph(extracteur: Extracteur | None = None, checkpointer: Any | None = None):
     """Construit et compile le graphe. `extracteur` est injectable (tests sans appel API)."""
-    extraire = extracteur or default_extracteur()
+    extraire = extracteur or extracteur_pour()
 
     def intake(state: State) -> dict:
         case = extraire([("system", prompt_intake()), *state["messages"]])

@@ -1,8 +1,10 @@
 """Essai interactif de l'intake agent dans le terminal.
 
     uv run python -m bellai.intake_agent
+    uv run python -m bellai.intake_agent --provider claude
 """
 
+import argparse
 import json
 import uuid
 
@@ -10,11 +12,17 @@ from dotenv import load_dotenv
 from langgraph.types import Command
 
 from . import build_graph
+from .graph import FOURNISSEURS, extracteur_pour
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Essai interactif de l'intake agent")
+    parser.add_argument("--provider", choices=list(FOURNISSEURS),
+                        help="Fournisseur du LLM (défaut : INTAKE_PROVIDER, sinon mistral)")
+    args = parser.parse_args()
+
     load_dotenv()
-    app = build_graph()
+    app = build_graph(extracteur=extracteur_pour(args.provider))
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
 
     print("Racontez votre situation (ligne vide pour terminer) :")
