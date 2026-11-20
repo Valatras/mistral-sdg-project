@@ -12,10 +12,13 @@ dependencies = [
     "huggingface-hub>=2.4.0",
     "ipykernel>=7.4.0",
     "jinja2>=3.1.6",
+    "langchain-mistralai>=1.2.0",
+    "langgraph>=1.2.24",
     "mistral-common>=1.13.1",
     "mistralai>=3.7.0",
     "openai-harmony>=0.0.8",
     "pandas>=3.1.1",
+    "pydantic>=2.14.3",
     "python-dotenv>=1.2.4",
     "transformers>=5.22.1",
 ]
@@ -27,5 +30,10 @@ bellai-main = "bellai.main:main"
 [build-system]
 requires = ["uv_build>=0.13.7,<0.14.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
 
 
