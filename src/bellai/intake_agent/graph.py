@@ -8,6 +8,7 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
+from pydantic import BaseModel, Field, create_model
 
 from .normalisation import anciennete_mois, champs_requis_manquants, normaliser, rediger_questions
 from .prompts import prompt_intake
@@ -39,11 +40,27 @@ def default_extracteur(model: str = "mistral-small-latest") -> Extracteur:
     return structured.invoke
 
 
-def claude_extracteur(model: str = "claude-haiku-5-5") -> Extracteur:
+def _schema_tout_requis(modele: type[BaseModel]) -> type[BaseModel]:
+    """Copie du modèle où chaque champ est obligatoire (même type, défaut indiqué en description).
+
+    Les sorties structurées de Claude compilent le schéma en grammaire : chaque champ optionnel
+    l'agrandit, et les 23 champs optionnels de CaseFile dépassent la limite ("Schema is too complex").
+    Claude remplit donc explicitement la valeur par défaut quand l'info n'est pas donnée.
+    """
+    champs = {}
+    for nom, info in modele.model_fields.items():
+        defaut = info.get_default(call_default_factory=True)
+        description = f"{info.description or ''} (si non mentionné : {defaut!r})".strip()
+        champs[nom] = (info.annotation, Field(..., description=description))
+    return create_model(f"{modele.__name__}Requis", __doc__=modele.__doc__, **champs)
+
+
+def claude_extracteur(model: str = "claude-sonnet-5-5") -> Extracteur:
     """Extracteur Claude (lit ANTHROPIC_API_KEY dans l'environnement)."""
     import anthropic
 
     client = anthropic.Anthropic()
+    schema_claude = _schema_tout_requis(CaseFile)
     ROLES = {"human": "user", "user": "user", "ai": "assistant", "assistant": "assistant"}
 
     def extraire(messages: list) -> CaseFile:
@@ -61,12 +78,12 @@ def claude_extracteur(model: str = "claude-haiku-5-5") -> Extracteur:
             max_tokens=16000,
             system=system,
             messages=history,
-            output_format=CaseFile,              # validé contre ton schéma Pydantic
+            output_format=schema_claude,         # tous champs requis (voir _schema_tout_requis)
             output_config={"effort": "low"},     # extraction simple : peu de réflexion nécessaire
         )
         if response.stop_reason == "refusal":
             raise RuntimeError("Claude a refusé la requête")
-        return response.parsed_output
+        return CaseFile.model_validate(response.parsed_output.model_dump())
 
     return extraire
 
