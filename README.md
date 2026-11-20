@@ -43,23 +43,32 @@ L’extraction ne fait pas d’OCR et peut mal restituer les tableaux ou les mis
 
 L’intake agent est le premier agent de la boucle multi-agents. Il lit le récit de l’utilisateur, souvent émotionnel ou désordonné, et en extrait un dossier structuré (`CaseFile`) : thème, statut, catégorie ouvrier ou employé, type de contrat, commission paritaire, régions, dates, salaire, âge, protections particulières, questions juridiques reformulées. Il pose des questions de clarification quand des informations indispensables manquent, puis prépare les requêtes et les filtres de métadonnées pour la recherche dans le RAG. L’agent généraliste qui suit reçoit ce dossier.
 
-Il est orchestré avec LangGraph (`langgraph`, `langchain-mistralai`) et utilise `mistral-small-latest` en sortie structurée.
+Il est orchestré avec LangGraph (`langgraph`). Deux fournisseurs de LLM sont disponibles pour l’extraction, tous deux en sortie structurée validée par le schéma Pydantic :
+
+| Fournisseur | Modèle | Bibliothèque | Clé dans `.env` |
+|---|---|---|---|
+| `mistral` (défaut) | `mistral-small-latest` | `langchain-mistralai` | `MISTRAL_API_KEY` |
+| `claude` | `claude-haiku-5-5` | `anthropic` (`messages.parse`) | `ANTHROPIC_API_KEY` |
+
+Le fournisseur se choisit avec l’option `--provider`, la variable `INTAKE_PROVIDER=claude` ou, en code, `extracteur_pour("claude")`.
 
 ### Essayer l’agent
 
 ```sh
-uv run python -m bellai.intake_agent
+uv run python -m bellai.intake_agent                    # Mistral
+uv run python -m bellai.intake_agent --provider claude  # Claude
 ```
 
-Saisir le récit, puis valider une ligne vide. Répondre aux éventuelles questions de clarification en une ligne. Le terminal affiche ensuite le `CaseFile`, l’ancienneté calculée et le contexte RAG. `MISTRAL_API_KEY` est lu depuis `.env`. Le récit et les réponses sont envoyés à Mistral.
+Saisir le récit, puis valider une ligne vide. Répondre aux éventuelles questions de clarification en une ligne. Le terminal affiche ensuite le `CaseFile`, l’ancienneté calculée et le contexte RAG. Les clés sont lues depuis `.env`. Le récit et les réponses sont envoyés au fournisseur choisi (Mistral ou Anthropic).
 
 Depuis du code :
 
 ```python
 from langgraph.types import Command
 from bellai.intake_agent import build_graph
+from bellai.intake_agent.graph import extracteur_pour
 
-app = build_graph()
+app = build_graph(extracteur=extracteur_pour("claude"))  # ou build_graph() : INTAKE_PROVIDER, sinon Mistral
 config = {"configurable": {"thread_id": "session-1"}}
 out = app.invoke({"messages": [("user", "On m'a licencié hier après 6 ans...")]}, config)
 
@@ -128,7 +137,7 @@ Les valeurs de `themes` et `niveaux` doivent correspondre aux métadonnées pos�
 | `prompts.py` | Prompt d’extraction, avec la date du jour injectée |
 | `normalisation.py` | Normalisation, champs requis, questions de clarification (FR et NL), ancienneté |
 | `rag_context.py` | Construction du contexte RAG |
-| `graph.py` | État, nœuds et `build_graph()` |
+| `graph.py` | État, nœuds, extracteurs Mistral et Claude, `extracteur_pour()` et `build_graph()` |
 | `__main__.py` | Essai interactif dans le terminal |
 
 ### Évaluation
@@ -142,4 +151,5 @@ Les valeurs de `themes` et `niveaux` doivent correspondre aux métadonnées pos�
 - La région n’est déduite que d’un code postal. Une ville citée sans code postal repose sur l’interprétation du LLM.
 - Le thème `autre` ne déclenche aucune clarification.
 - Les sessions sont gardées en mémoire (`MemorySaver`) et perdues à l’arrêt du processus.
-- Le modèle est fixé dans `graph.py` (`default_extracteur`) et ne lit pas encore `MISTRAL_CHAT_MODEL`.
+- Les modèles sont fixés dans `graph.py` (`default_extracteur`, `claude_extracteur`) et ne lisent pas encore `MISTRAL_CHAT_MODEL`.
+- L’extracteur Claude n’a été vérifié que contre une API simulée (requête, schéma, lecture de la réponse), pas encore sur de vrais récits.
