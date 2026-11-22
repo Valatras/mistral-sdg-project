@@ -9,6 +9,9 @@ from unittest.mock import Mock, patch
 from bellai.RAG.answer import format_source, generate_answer
 from bellai.RAG.documents import Chunk, load_chunks, split_text
 from bellai.RAG.index import Match, build_index, load_index, retrieve
+from bellai.agents.intake_agent import build_graph
+from bellai.agents.intake_agent.schema import CaseFile
+from bellai.agents.legal_research_agent import research
 from bellai.main import main
 
 
@@ -46,24 +49,63 @@ class RagTests(unittest.TestCase):
 
     def test_persistence_reuse_rebuild_and_retrieval(self):
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "index.json"
+            path = Path(directory) / "chroma"
             a = Chunk("1", "notice.pdf", 2, "Notice period")
             b = Chunk("2", "other.txt", None, "Something else")
             embed = Mock(return_value=[[2, 0], [0, 4]])
             self.assertTrue(build_index(path, "model", [a, b], embed))
             self.assertFalse(build_index(path, "model", [a, b], embed))
             embed.assert_called_once()
-            _, entries = load_index(path, "model")
-            self.assertEqual(retrieve(entries, "notice", 1, Mock(return_value=[[3, 0]])),
+            collection = load_index(path, "model")
+            self.assertEqual(retrieve(collection, "notice", 1, Mock(return_value=[[3, 0]])),
                              [Match(a, 1.0)])
             with self.assertRaisesRegex(ValueError, "embedding model changed"):
                 load_index(path, "other-model")
-            original = path.read_bytes()
+            original = (path / "active").read_bytes()
             with self.assertRaises(ValueError):
                 build_index(path, "model", [a, b], Mock(return_value=[[0, 0]]), rebuild=True)
-            self.assertEqual(path.read_bytes(), original)
+            self.assertEqual((path / "active").read_bytes(), original)
             self.assertTrue(build_index(path, "model", [a, b], embed, rebuild=True))
             self.assertTrue(build_index(path, "model", [b], Mock(return_value=[[0, 4]])))
+            self.assertEqual(load_index(path, "model").get()["ids"], [b.id])
+
+    def test_legacy_migration_reuses_saved_vectors(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)
+            old = path / "index.json"
+            old.write_text(json.dumps({
+                "version": 1, "model": "model",
+                "entries": [{"chunk": {"id": "one"}, "vector": [1, 0]}],
+            }))
+            a = Chunk("one", "a.pdf", 4, "Notice")
+            b = Chunk("two", "b.txt", None, "Dismissal")
+            embed = Mock(return_value=[[0, 1]])
+            self.assertTrue(build_index(path / "chroma", "model", [a, b], embed, legacy_path=old))
+            embed.assert_called_once_with(["Dismissal"])
+            self.assertEqual(load_index(path / "chroma", "model").count(), 2)
+
+    def test_intake_passes_queries_and_language_to_legal_research(self):
+        case = CaseFile(
+            langue="nl", questions_juridiques=["Vraag?", " Vraag? ", " "]
+        )
+        app = build_graph(extracteur=lambda _: case)
+        config = {"configurable": {"thread_id": "research-test"}}
+        out = app.invoke({"messages": [("user", "Een vraag")]}, config)
+        self.assertIsInstance(app.get_state(config).values["case_file"], CaseFile)
+        with tempfile.TemporaryDirectory() as directory:
+            index = Path(directory)
+            chunk = Chunk("one", "source.pdf", 7, "Excerpt")
+            embed = Mock(return_value=[[1, 0]])
+            build_index(index, "model", [chunk], embed)
+            embed.reset_mock()
+            chat = Mock(return_value='{"found": true, "answer": "Zie [S1]."}')
+            findings = research(
+                out["contexte_rag"], embedding_model="model", embed=embed, chat=chat, index=index
+            )
+            embed.assert_called_once_with(["Vraag?"])
+            self.assertEqual(len(findings), 1)
+            self.assertEqual(findings[0].sources, {"S1": chunk})
+            self.assertEqual(json.loads(chat.call_args.args[1])["response_language"], "nl")
 
     def test_citations_and_abstention(self):
         a = Chunk("1", "nested/notice.pdf", 2, "Notice period")
@@ -86,11 +128,11 @@ class RagTests(unittest.TestCase):
             docs = root / "docs"
             docs.mkdir()
             (docs / "notice.txt").write_text("Exemple de texte.", encoding="utf-8")
-            index_args = ["--index", str(root / "index.json")]
+            index_args = ["--index", str(root / "chroma")]
             stdout, stderr = io.StringIO(), io.StringIO()
             with (
-                patch("bellai.main.Models.embed", return_value=[[1, 0]]),
-                patch("bellai.main.Models.chat", return_value='{"found": true, "answer": "Exemple [S1]."}'),
+                patch("bellai.config.Models.embed", return_value=[[1, 0]]),
+                patch("bellai.config.Models.chat", return_value='{"found": true, "answer": "Exemple [S1]."}'),
                 redirect_stdout(stdout),
                 redirect_stderr(stderr),
             ):
