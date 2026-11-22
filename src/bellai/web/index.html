@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BellAI</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --surface: #ffffff; --surface-2: #f0eee8; --text: #1d1c1a; --muted: #6b6860;
+    --border: #e2dfd6; --accent: #1f5f8b; --accent-text: #ffffff; --accent-soft: #e3eef6;
+    --warn: #8a5a00; --warn-soft: #fbf0d9; --ok: #2e6b3f; --ok-soft: #e2f1e5; --err: #a33232; --err-soft: #f8e3e3;
+    --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --surface: #1f1e1c; --surface-2: #282724; --text: #ecebe6; --muted: #a09d94;
+      --border: #34332f; --accent: #6aaedc; --accent-text: #0d1a24; --accent-soft: #1d2e3b;
+      --warn: #e8b85a; --warn-soft: #3a2f18; --ok: #7cc58e; --ok-soft: #1c3022; --err: #f08a8a; --err-soft: #3d1f1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--border); background: var(--surface);
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: -.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px;
+    padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 16px; } header { padding: 14px 16px; } }
+  section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px; min-width: 0; }
+  h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  h3 { margin: 18px 0 8px; font-size: 14px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  label.small { font-size: 13px; color: var(--muted); }
+  select, textarea, input[type=text], input[type=number] { font: inherit; color: var(--text); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  select { max-width: 100%; }
+  textarea { width: 100%; min-height: 150px; resize: vertical; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+    background: var(--accent); color: var(--accent-text); }
+  button.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+  button:disabled { opacity: .5; cursor: progress; }
+  .chat { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .msg { padding: 10px 12px; border-radius: 10px; max-width: 92%; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; background: var(--accent-soft); }
+  .msg.agent { align-self: flex-start; background: var(--warn-soft); }
+  .msg.agent ul { margin: 4px 0 0; padding-left: 18px; }
+  .msg .who { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  .error { background: var(--err-soft); color: var(--err); padding: 10px 12px; border-radius: 8px; margin-top: 12px;
+    overflow-wrap: anywhere; }
+  .empty { color: var(--muted); font-size: 14px; }
+  dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; margin: 0; }
+  dt { color: var(--muted); font-size: 13px; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); }
+  .chip.theme { background: var(--accent-soft); border-color: transparent; }
+  .chip.miss { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  ol, ul.facts { margin: 0; padding-left: 20px; }
+  .stat { display: inline-flex; flex-direction: column; padding: 8px 14px; border-radius: 8px; background: var(--ok-soft); }
+  .stat b { font-size: 20px; color: var(--ok); }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .finding { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+  .finding .q { font-weight: 600; }
+  .finding .a { white-space: pre-wrap; margin: 6px 0 8px; }
+  details { font-size: 13px; margin: 4px 0; }
+  details summary { cursor: pointer; color: var(--accent); }
+  details pre { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; background: var(--surface-2);
+    padding: 8px; border-radius: 6px; max-height: 240px; overflow: auto; }
+  .raw summary { color: var(--muted); }
+  .raw pre { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .disclaimer { font-size: 12px; color: var(--muted); margin-top: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>BellAI</h1>
+  <p>Essai local de l’intake agent et de la recherche juridique. Informations, pas un avis juridique.</p>
+</header>
+
+<main>
+  <section>
+    <h2>Conversation</h2>
+    <div class="row">
+      <label class="small" for="provider">Fournisseur</label>
+      <select id="provider"></select>
+      <label class="small" for="preset">Récit de test</label>
+      <select id="preset"><option value="">— écrire mon propre récit —</option></select>
+    </div>
+    <textarea id="recit" placeholder="Racontez votre situation…"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="start">Analyser</button>
+      <button id="reset" class="secondary">Nouveau dossier</button>
+      <span id="status" class="small"></span>
+    </div>
+    <div id="chat" class="chat"></div>
+    <div id="answerBox" class="row" style="margin-top:10px" hidden>
+      <input id="answer" type="text" placeholder="Votre réponse…" style="flex:1; min-width:0">
+      <button id="send">Envoyer</button>
+    </div>
+    <div id="error" class="error" hidden></div>
+  </section>
+
+  <section>
+    <h2>Dossier</h2>
+    <div id="dossier"><p class="empty">Le dossier structuré apparaîtra ici après l’analyse.</p></div>
+    <div id="researchBox" hidden>
+      <h3>Recherche juridique</h3>
+      <div class="row">
+        <label class="small" for="topk">Passages par question</label>
+        <input id="topk" type="number" min="1" max="20" value="5" style="width:70px">
+        <button id="research">Rechercher dans le corpus</button>
+      </div>
+      <div id="findings"></div>
+    </div>
+    <p class="disclaimer">Le récit est envoyé au fournisseur choisi. La recherche utilise Mistral et l’index Chroma local (lancer <code>bellai ingest</code> au préalable).</p>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let threadId = null, stories = [], pendingAnswers = [];
+
+const LABELS = {
+  langue: "Langue", cas_usage: "Thèmes", statut_emploi: "Statut", categorie: "Catégorie", type_contrat: "Contrat",
+  commission_paritaire: "Commission paritaire", secteur: "Secteur", region_travail: "Région du travail",
+  region_domicile: "Région du domicile", code_postal_travail: "CP travail", code_postal_domicile: "CP domicile",
+  date_debut_contrat: "Début du contrat", date_notification_licenciement: "Notification du licenciement",
+  date_fin_contrat: "Fin du contrat", salaire_brut_mensuel: "Salaire brut mensuel", age: "Âge",
+  protection_speciale: "Protection spéciale", motif_invoque: "Motif invoqué", motif_grave: "Motif grave",
+  urgence: "Urgence", etat_emotionnel: "État émotionnel",
+};
+const LISTES = ["questions_juridiques", "faits_cles"];
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+
+function busy(on, text = "") {
+  for (const id of ["start", "send", "research"]) $(id).disabled = on;
+  $("status").innerHTML = on ? `<span class="spinner"></span>${esc(text)}` : esc(text);
+}
+function showError(e) { $("error").hidden = !e; $("error").textContent = e ? String(e.message || e) : ""; }
+function addMsg(who, html, cls) {
+  const d = document.createElement("div");
+  d.className = `msg ${cls}`; d.innerHTML = `<span class="who">${esc(who)}</span>${html}`;
+  $("chat").appendChild(d); d.scrollIntoView({block: "nearest", behavior: "smooth"});
+}
+
+function fmt(k, v) {
+  if (Array.isArray(v)) return `<div class="chips">${v.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div>`;
+  if (typeof v === "boolean") return v ? "oui" : "non";
+  if (k === "salaire_brut_mensuel") return `${Number(v).toLocaleString("fr-BE")} €`;
+  return esc(v);
+}
+
+function renderDossier(d) {
+  const cf = d.case_file, ctx = d.contexte_rag;
+  const champs = Object.entries(cf).filter(([k]) => !LISTES.includes(k));
+  let h = "";
+  if (d.anciennete_mois != null) {
+    const a = Math.floor(d.anciennete_mois / 12), m = d.anciennete_mois % 12;
+    h += `<div class="stat" style="margin-bottom:12px"><b>${a} an${a > 1 ? "s" : ""} ${m} mois</b><span>ancienneté calculée (${d.anciennete_mois} mois)</span></div>`;
+  }
+  if (d.manquants.length) h += `<p>Éléments manquants : <span class="chips">${d.manquants.map((x) => `<span class="chip miss">${esc(LABELS[x] || x)}</span>`).join("")}</span></p>`;
+  h += `<dl>${champs.map(([k, v]) => `<dt>${esc(LABELS[k] || k)}</dt><dd>${fmt(k, v)}</dd>`).join("")}</dl>`;
+  if (cf.questions_juridiques?.length) h += `<h3>Questions juridiques</h3><ol>${cf.questions_juridiques.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>`;
+  if (cf.faits_cles?.length) h += `<h3>Faits clés</h3><ul class="facts">${cf.faits_cles.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>`;
+  h += `<h3>Contexte RAG</h3><div class="chips">${ctx.themes.map((t) => `<span class="chip theme">${esc(t)}</span>`).join("")}${ctx.niveaux.map((n) => `<span class="chip">${esc(n)}</span>`).join("")}<span class="chip">langue : ${esc(ctx.langue)}</span></div>`;
+  h += `<details class="raw"><summary>JSON brut</summary><pre>${esc(JSON.stringify({case_file: cf, contexte_rag: ctx}, null, 2))}</pre></details>`;
+  $("dossier").innerHTML = h;
+  $("researchBox").hidden = false; $("findings").innerHTML = "";
+}
+
+function handle(d) {
+  if (d.status === "questions") {
+    addMsg("BellAI", `J’ai besoin de quelques précisions :<ul>${d.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>`, "agent");
+    $("answerBox").hidden = false;
+    $("answer").value = pendingAnswers.shift() || "";
+    $("answer").focus();
+  } else {
+    $("answerBox").hidden = true;
+    addMsg("BellAI", "Dossier complet. Voir le panneau de droite.", "agent");
+    renderDossier(d);
+  }
+}
+
+async function start() {
+  const recit = $("recit").value.trim();
+  if (!recit) return showError("Écrivez d’abord un récit.");
+  reset(false); showError(null); addMsg("Vous", esc(recit), "user");
+  const s = stories.find((x) => x.id === $("preset").value);
+  pendingAnswers = s ? [...s.reponses] : [];
+  busy(true, "Extraction en cours…");
+  try { const d = await api("/api/start", {recit, provider: $("provider").value}); threadId = d.thread_id; handle(d); }
+  catch (e) { showError(e); } finally { busy(false); }
+}
+
+async function send() {
+  const reponse = $("answer").value.trim();
+  if (!reponse || !threadId) return;
+  addMsg("Vous", esc(reponse), "user"); $("answer").value = ""; showError(null);
+  busy(true, "Mise à jour du dossier…");
+  try { handle(await api("/api/resume", {thread_id: threadId, reponse})); }
+  catch (e) { showError(e); } finally { busy(false); }
+}
+
+async function doResearch() {
+  showError(null); busy(true, "Recherche dans le corpus…");
+  try {
+    const {findings} = await api("/api/research", {thread_id: threadId, top_k: Number($("topk").value) || 5});
+    $("findings").innerHTML = findings.length ? findings.map((f) => `
+      <div class="finding"><div class="q">${esc(f.question)}</div><div class="a">${esc(f.answer)}</div>
+      ${f.sources.map((s) => `<details><summary>[${esc(s.label)}] ${esc(s.ref)}</summary><pre>${esc(s.text)}</pre></details>`).join("")}</div>`).join("")
+      : `<p class="empty">Aucune question exploitable pour la recherche.</p>`;
+  } catch (e) { showError(e); } finally { busy(false); }
+}
+
+function reset(clearText = true) {
+  threadId = null; $("chat").innerHTML = ""; $("answerBox").hidden = true; $("researchBox").hidden = true;
+  $("dossier").innerHTML = `<p class="empty">Le dossier structuré apparaîtra ici après l’analyse.</p>`;
+  showError(null);
+  if (clearText) { $("recit").value = ""; $("preset").value = ""; }
+}
+
+$("start").onclick = start; $("send").onclick = send; $("research").onclick = doResearch; $("reset").onclick = () => reset();
+$("answer").addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+$("recit").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(); });
+$("preset").onchange = () => { const s = stories.find((x) => x.id === $("preset").value); $("recit").value = s ? s.recit : ""; };
+
+(async () => {
+  try {
+    const [{providers}, data] = await Promise.all([api("/api/providers"), api("/api/stories")]);
+    $("provider").innerHTML = providers.map((p) => `<option>${esc(p)}</option>`).join("");
+    stories = data.stories;
+    $("preset").innerHTML += stories.map((s) => `<option value="${esc(s.id)}">${esc(s.id)} · ${esc(s.objectif.slice(0, 60))}</option>`).join("");
+  } catch (e) { showError(e); }
+})();
+</script>
+</body>
+</html>

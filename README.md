@@ -83,6 +83,15 @@ out["contexte_rag"]  # requêtes, langue et indications de thème et de région
 
 `build_graph(extracteur=...)` accepte n’importe quelle fonction `messages -> CaseFile`. On peut ainsi tester le graphe sans appel API.
 
+### Interface web
+
+```sh
+uv run --locked python -m bellai.web          # ouvre http://127.0.0.1:8000
+uv run --locked python -m bellai.web --port 8080 --no-browser
+```
+
+La page permet de choisir le fournisseur, de charger un récit de `evals/`, de répondre aux clarifications, puis d’afficher le dossier, l’ancienneté et le contexte RAG et de lancer la recherche juridique avec ses sources. Le serveur n’écoute que sur la machine locale. Les sessions sont perdues à son arrêt.
+
 ### Fonctionnement
 
 ```
