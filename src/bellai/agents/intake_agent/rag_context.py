@@ -1,8 +1,4 @@
-"""Traduit le CaseFile en requêtes et filtres de métadonnées pour la recherche RAG.
-
-Les valeurs (`themes`, `niveaux`) doivent correspondre aux métadonnées posées
-à l'ingestion des documents de `fichier_rag/`.
-"""
+"""Prépare les requêtes RAG et les indications de thème et de région du dossier."""
 
 from typing import TypedDict
 
@@ -30,8 +26,8 @@ REGION_PERTINENTE = {
 
 class ContexteRAG(TypedDict):
     requetes: list[str]          # textes à chercher (embeddings)
-    themes: list[str]            # filtre metadata "theme"
-    niveaux: list[str]           # filtre metadata "niveau" (ue, federal + régions pertinentes)
+    themes: list[str]            # thèmes repérés dans le dossier
+    niveaux: list[str]           # niveaux à considérer (ue, federal et régions pertinentes)
     langue: str                  # langue de réponse
 
 

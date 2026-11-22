@@ -10,6 +10,7 @@ from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field, create_model
 
+from ...config import configured_models
 from .normalisation import anciennete_mois, champs_requis_manquants, normaliser, rediger_questions
 from .prompts import prompt_intake
 from .rag_context import ContexteRAG, construire_contexte_rag
@@ -31,11 +32,11 @@ class State(TypedDict, total=False):
 Extracteur = Callable[[list], CaseFile]
 
 
-def default_extracteur(model: str = "mistral-small-latest") -> Extracteur:
+def default_extracteur(model: str | None = None) -> Extracteur:
     """Extracteur Mistral (lit MISTRAL_API_KEY dans l'environnement)."""
     from langchain_mistralai import ChatMistralAI
 
-    llm = ChatMistralAI(model=model, temperature=0)
+    llm = ChatMistralAI(model=model or configured_models().chat_model, temperature=0)
     structured = llm.with_structured_output(CaseFile)
     return structured.invoke
 
@@ -143,10 +144,10 @@ def build_graph(extracteur: Extracteur | None = None, checkpointer: Any | None =
     g.add_edge("intake", "validation")
     g.add_conditional_edges("validation", apres_validation, ["clarification", "preparation_rag"])
     g.add_edge("clarification", "intake")
-    g.add_edge("preparation_rag", END)  # à remplacer par l'agent généraliste
+    g.add_edge("preparation_rag", END)
 
     if checkpointer is None:
         # Autorise explicitement CaseFile dans les checkpoints (sinon avertissement, bloqué à terme)
-        serde = JsonPlusSerializer(allowed_msgpack_modules=[("bellai.intake_agent.schema", "CaseFile")])
+        serde = JsonPlusSerializer(allowed_msgpack_modules=[(CaseFile.__module__, CaseFile.__name__)])
         checkpointer = MemorySaver(serde=serde)
     return g.compile(checkpointer=checkpointer)
