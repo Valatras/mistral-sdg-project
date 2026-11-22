@@ -10,7 +10,7 @@ from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
 from pydantic import BaseModel, Field, create_model
 
-from ...config import configured_models
+from ...config import CLAUDE_INTAKE_MODEL, INTAKE_MODEL
 from .normalisation import anciennete_mois, champs_requis_manquants, normaliser, rediger_questions
 from .prompts import prompt_intake
 from .rag_context import ContexteRAG, construire_contexte_rag
@@ -36,7 +36,7 @@ def default_extracteur(model: str | None = None) -> Extracteur:
     """Extracteur Mistral (lit MISTRAL_API_KEY dans l'environnement)."""
     from langchain_mistralai import ChatMistralAI
 
-    llm = ChatMistralAI(model=model or configured_models().chat_model, temperature=0)
+    llm = ChatMistralAI(model=model or INTAKE_MODEL, temperature=0)
     structured = llm.with_structured_output(CaseFile)
     return structured.invoke
 
@@ -56,7 +56,7 @@ def _schema_tout_requis(modele: type[BaseModel]) -> type[BaseModel]:
     return create_model(f"{modele.__name__}Requis", __doc__=modele.__doc__, **champs)
 
 
-def claude_extracteur(model: str = "claude-sonnet-5-5") -> Extracteur:
+def claude_extracteur(model: str = CLAUDE_INTAKE_MODEL) -> Extracteur:
     """Extracteur Claude (lit ANTHROPIC_API_KEY dans l'environnement)."""
     import anthropic
 

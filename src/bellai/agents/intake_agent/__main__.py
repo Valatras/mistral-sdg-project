@@ -15,13 +15,18 @@ from langgraph.types import Command
 
 from ...RAG.answer import format_source
 from ...RAG.index import DEFAULT_INDEX
-from ...config import configured_models
+from ...config import LEGAL_RESEARCH_MODEL, Models
 from ..legal_research_agent import research
 from . import build_graph
+from .graph import FOURNISSEURS, extracteur_pour
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Recueillir un dossier et rechercher des sources juridiques.")
+    parser.add_argument(
+        "--provider", choices=FOURNISSEURS,
+        help="Fournisseur de l’intake (INTAKE_PROVIDER ou Mistral par défaut)",
+    )
     parser.add_argument("--research", action="store_true", help="Rechercher après les clarifications")
     parser.add_argument("--index", type=Path, default=DEFAULT_INDEX)
     parser.add_argument("--top-k", type=int, default=5)
@@ -30,9 +35,8 @@ def main() -> int:
         parser.error("--top-k doit être positif.")
 
     load_dotenv()
-    models = configured_models()
     try:
-        app = build_graph()
+        app = build_graph(extracteur=extracteur_pour(args.provider))
     except ValueError as exc:
         print(f"Erreur de configuration : {exc}", file=sys.stderr)
         return 1
@@ -59,6 +63,7 @@ def main() -> int:
     print(json.dumps(out["contexte_rag"], indent=2, ensure_ascii=False))
 
     if args.research:
+        models = Models(chat_model=LEGAL_RESEARCH_MODEL)
         try:
             findings = research(
                 out["contexte_rag"], embedding_model=models.embedding_model,

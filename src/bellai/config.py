@@ -6,9 +6,16 @@ from functools import cached_property
 from mistralai.client import Mistral
 
 
+EMBEDDING_MODEL = "mistral-embed"
+RAG_ANSWER_MODEL = "mistral-small-latest"
+INTAKE_MODEL = "mistral-small-latest"
+CLAUDE_INTAKE_MODEL = "claude-sonnet-5-5"
+LEGAL_RESEARCH_MODEL = "mistral-small-latest"
+
+
 class Models:
-    def __init__(self, embedding_model: str, chat_model: str):
-        self.embedding_model = embedding_model
+    def __init__(self, *, chat_model: str):
+        self.embedding_model = EMBEDDING_MODEL
         self.chat_model = chat_model
 
     @cached_property
@@ -44,10 +51,3 @@ class Models:
             return content
         except Exception as exc:
             raise ValueError(f"Mistral chat request failed ({type(exc).__name__}).") from None
-
-
-def configured_models() -> Models:
-    return Models(
-        os.getenv("MISTRAL_EMBED_MODEL", "mistral-embed"),
-        os.getenv("MISTRAL_CHAT_MODEL", "mistral-small-latest"),
-    )

@@ -13,7 +13,7 @@ uv sync --locked
 cp -n .env.example .env
 ```
 
-Renseigner `MISTRAL_API_KEY` dans `.env` ou dans l’environnement. Les modèles par défaut sont `mistral-embed` et `mistral-small-latest`. Les variables `MISTRAL_EMBED_MODEL` et `MISTRAL_CHAT_MODEL` permettent de les configurer. À l’indexation, Mistral reçoit le texte des passages. À chaque question, le service reçoit la question et les passages sélectionnés. Utiliser un corpus et des questions dont la transmission est autorisée.
+Renseigner `MISTRAL_API_KEY` dans `.env` ou dans l’environnement. Les modèles sont définis dans `src/bellai/config.py` par rôle. `EMBEDDING_MODEL` sert à l’indexation et à la recherche, `RAG_ANSWER_MODEL` à la commande `ask`, `INTAKE_MODEL` à l’extraction du dossier et `LEGAL_RESEARCH_MODEL` à la synthèse des résultats de recherche. Après un changement de `EMBEDDING_MODEL`, relancer `bellai ingest` pour réindexer le corpus. À l’indexation, Mistral reçoit le texte des passages. À chaque question, le service reçoit la question et les passages sélectionnés. Utiliser un corpus et des questions dont la transmission est autorisée.
 
 ## Utilisation
 
@@ -45,15 +45,23 @@ L’extraction ne fait pas d’OCR et peut mal restituer les tableaux ou les mis
 
 L’intake agent est le point d’entrée du traitement d’un dossier. Il lit le récit de l’utilisateur, souvent émotionnel ou désordonné, et en extrait un dossier structuré (`CaseFile`) : thème, statut, catégorie ouvrier ou employé, type de contrat, commission paritaire, régions, dates, salaire, âge, protections particulières, questions juridiques reformulées. Il pose des questions de clarification quand des informations indispensables manquent, puis prépare les requêtes, la langue et les indications de thème et de région pour la recherche.
 
-Il est orchestré avec LangGraph (`langgraph`, `langchain-mistralai`) et utilise `mistral-small-latest` en sortie structurée.
+L’intake utilise LangGraph et prend en charge deux fournisseurs pour l’extraction structurée.
+
+| Fournisseur | Modèle configuré dans `src/bellai/config.py` | Clé API |
+|---|---|---|
+| `mistral` (par défaut) | `INTAKE_MODEL` | `MISTRAL_API_KEY` |
+| `claude` | `CLAUDE_INTAKE_MODEL` | `ANTHROPIC_API_KEY` |
+
+Choisir le fournisseur avec `--provider` ou `INTAKE_PROVIDER=claude`. En Python, passer `extracteur_pour("claude")` (depuis `bellai.agents.intake_agent.graph`) à `build_graph(extracteur=...)`.
 
 ### Essayer l’agent
 
 ```sh
 uv run --locked python -m bellai.agents.intake_agent
+uv run --locked python -m bellai.agents.intake_agent --provider claude
 ```
 
-Saisir le récit, puis valider une ligne vide. Répondre aux éventuelles questions de clarification en une ligne. Le terminal affiche ensuite le `CaseFile`, l’ancienneté calculée et le contexte RAG. `MISTRAL_API_KEY` est lu depuis `.env`. Le récit et les réponses sont envoyés à Mistral.
+Saisir le récit, puis valider une ligne vide. Répondre aux éventuelles questions de clarification en une ligne. Le terminal affiche ensuite le `CaseFile`, l’ancienneté calculée et le contexte RAG. Les clés peuvent être définies dans `.env`. Le récit et les réponses aux clarifications sont envoyés au fournisseur choisi.
 
 Depuis du code :
 
@@ -127,7 +135,7 @@ Le corpus contient le chemin source et, pour les PDF, le numéro de page. Les in
 | `prompts.py` | Prompt d’extraction, avec la date du jour injectée |
 | `normalisation.py` | Normalisation, champs requis, questions de clarification (FR et NL), ancienneté |
 | `rag_context.py` | Construction du contexte RAG |
-| `graph.py` | État, nœuds et `build_graph()` |
+| `graph.py` | État, nœuds, extracteurs Mistral et Claude, `extracteur_pour()` et `build_graph()` |
 | `__main__.py` | Essai interactif dans le terminal |
 
 ### Évaluation
@@ -141,7 +149,6 @@ Le corpus contient le chemin source et, pour les PDF, le numéro de page. Les in
 - La région n’est déduite que d’un code postal. Une ville citée sans code postal repose sur l’interprétation du LLM.
 - Le thème `autre` ne déclenche aucune clarification.
 - Les sessions sont gardées en mémoire (`MemorySaver`) et perdues à l’arrêt du processus.
-- Le modèle d’extraction et celui de recherche utilisent `MISTRAL_CHAT_MODEL`.
 
 
 ## Legal research agent
@@ -150,7 +157,10 @@ Après l’ingestion, lancer le parcours interactif complet :
 
 ```sh
 uv run --locked python -m bellai.agents.intake_agent --research
+uv run --locked python -m bellai.agents.intake_agent --provider claude --research
 ```
+
+La recherche utilise Mistral pour les embeddings et la synthèse, y compris avec Claude pour l’intake. Le parcours Claude avec `--research` requiert donc les deux clés.
 
 Après les clarifications, l’agent récupère dans Chroma jusqu’à cinq passages par requête distincte préparée par l’intake, puis génère un constat dans la langue du dossier. Chaque constat cite les extraits utilisés avec leur chemin et leur page, ou indique que les sources sont insuffisantes. Les identifiants `[S1]`, `[S2]`, etc. sont propres à chaque réponse. Les éléments manquants du dossier restent visibles. `--index` sélectionne un dossier Chroma et `--top-k` règle le nombre de passages par requête.
 

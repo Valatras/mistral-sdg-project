@@ -10,8 +10,10 @@ from bellai.RAG.answer import format_source, generate_answer
 from bellai.RAG.documents import Chunk, load_chunks, split_text
 from bellai.RAG.index import Match, build_index, load_index, retrieve
 from bellai.agents.intake_agent import build_graph
+from bellai.agents.intake_agent.__main__ import main as intake_main
 from bellai.agents.intake_agent.schema import CaseFile
 from bellai.agents.legal_research_agent import research
+from bellai.config import CLAUDE_INTAKE_MODEL, EMBEDDING_MODEL
 from bellai.main import main
 
 
@@ -106,6 +108,31 @@ class RagTests(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertEqual(findings[0].sources, {"S1": chunk})
             self.assertEqual(json.loads(chat.call_args.args[1])["response_language"], "nl")
+
+    def test_cli_combines_claude_intake_with_chroma_research(self):
+        case = CaseFile(questions_juridiques=["Quel préavis ?"])
+        with tempfile.TemporaryDirectory() as directory:
+            index = Path(directory)
+            chunk = Chunk("one", "source.pdf", 7, "Extrait")
+            embed = Mock(return_value=[[1, 0]])
+            build_index(index, EMBEDDING_MODEL, [chunk], embed)
+            stdout = io.StringIO()
+            argv = ["intake", "--provider", "claude", "--research", "--index", str(index)]
+            with (
+                patch("sys.argv", argv),
+                patch("builtins.input", side_effect=["Un récit", ""]),
+                patch("anthropic.Anthropic") as anthropic,
+                patch("bellai.config.Models.embed", return_value=[[1, 0]]),
+                patch("bellai.config.Models.chat", return_value='{"found": true, "answer": "Voir [S1]."}'),
+                redirect_stdout(stdout),
+            ):
+                parse = anthropic.return_value.messages.parse
+                parse.return_value = Mock(stop_reason="end_turn", parsed_output=case)
+                self.assertEqual(intake_main(), 0)
+            parse.assert_called_once()
+            self.assertEqual(parse.call_args.kwargs["model"], CLAUDE_INTAKE_MODEL)
+            self.assertEqual(parse.call_args.kwargs["messages"], [{"role": "user", "content": "Un récit"}])
+            self.assertIn("[S1] source.pdf, p. 7", stdout.getvalue())
 
     def test_citations_and_abstention(self):
         a = Chunk("1", "nested/notice.pdf", 2, "Notice period")

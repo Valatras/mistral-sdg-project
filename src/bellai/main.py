@@ -10,7 +10,7 @@ from chromadb.errors import ChromaError
 from .RAG.answer import format_source, generate_answer
 from .RAG.documents import load_chunks
 from .RAG.index import DEFAULT_INDEX, build_index, load_index, retrieve
-from .config import configured_models
+from .config import RAG_ANSWER_MODEL, Models
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     for command in (ingest, ask):
         command.add_argument("--index", type=Path, default=DEFAULT_INDEX)
     args = parser.parse_args(argv)
-    models = configured_models()
+    models = Models(chat_model=RAG_ANSWER_MODEL)
     try:
         if args.command == "ingest":
             chunks, issues = load_chunks(args.documents, args.chunk_size, args.chunk_overlap)
