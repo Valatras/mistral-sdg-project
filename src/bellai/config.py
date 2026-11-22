@@ -2,6 +2,7 @@
 
 import os
 from functools import cached_property
+from langsmith import traceable
 
 from mistralai.client import Mistral
 
@@ -25,6 +26,7 @@ class Models:
             raise ValueError("Set MISTRAL_API_KEY in .env or your environment.")
         return Mistral(api_key=key)
 
+    @traceable(run_type="embedding", name="mistral_embed")
     def embed(self, texts: list[str]) -> list[list[float]]:
         client = self.client
         try:
@@ -36,6 +38,7 @@ class Models:
         except Exception as exc:
             raise ValueError(f"Mistral embedding request failed ({type(exc).__name__}).") from None
 
+    @traceable(run_type="llm", name="mistral_chat")
     def chat(self, system: str, payload: str) -> str:
         client = self.client
         try:

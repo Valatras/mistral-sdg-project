@@ -8,6 +8,7 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.types import interrupt
+from langsmith import traceable
 from pydantic import BaseModel, Field, create_model
 
 from ...config import CLAUDE_INTAKE_MODEL, INTAKE_MODEL
@@ -64,6 +65,7 @@ def claude_extracteur(model: str = CLAUDE_INTAKE_MODEL) -> Extracteur:
     schema_claude = _schema_tout_requis(CaseFile)
     ROLES = {"human": "user", "user": "user", "ai": "assistant", "assistant": "assistant"}
 
+    @traceable(run_type="llm", name="claude_intake", metadata={"ls_provider": "anthropic", "ls_model_name": model})
     def extraire(messages: list) -> CaseFile:
         # Le graphe envoie [("system", prompt), *messages LangChain] : on convertit au format Claude
         system, history = "", []

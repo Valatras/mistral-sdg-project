@@ -165,3 +165,18 @@ La recherche utilise Mistral pour les embeddings et la synthèse, y compris avec
 Après les clarifications, l’agent récupère dans Chroma jusqu’à cinq passages par requête distincte préparée par l’intake, puis génère un constat dans la langue du dossier. Chaque constat cite les extraits utilisés avec leur chemin et leur page, ou indique que les sources sont insuffisantes. Les identifiants `[S1]`, `[S2]`, etc. sont propres à chaque réponse. Les éléments manquants du dossier restent visibles. `--index` sélectionne un dossier Chroma et `--top-k` règle le nombre de passages par requête.
 
 Depuis du code, `bellai.agents.legal_research_agent.research(out["contexte_rag"], ...)` accepte les fonctions d’embedding et de génération en paramètres. Il renvoie des résultats structurés avec la question, le constat et la provenance de chaque citation.
+
+## Traçage (LangSmith)
+
+Le traçage est désactivé par défaut. Pour l’activer, créer une clé API sur [LangSmith](https://smith.langchain.com) (ou [la région EU](https://eu.smith.langchain.com)), puis renseigner dans `.env` :
+
+```sh
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_...
+LANGSMITH_PROJECT=bellai
+LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com   # seulement pour un compte EU
+```
+
+Les commandes habituelles envoient ensuite leurs traces dans le projet choisi. Sont tracés : les nœuds du graphe LangGraph et l’état entre les nœuds, l’extraction Mistral (`ChatMistralAI`), l’extraction Claude (`claude_intake`) ainsi que les embeddings (`mistral_embed`) et les générations (`mistral_chat`) du RAG et de la recherche juridique.
+
+Les récits, les réponses de clarification et les passages du corpus sont transmis à LangSmith. Activer le traçage de préférence avec les récits de `evals/`. Avec des données réelles, ajouter `LANGSMITH_HIDE_INPUTS=true` et `LANGSMITH_HIDE_OUTPUTS=true` pour ne conserver que la structure et les durées.

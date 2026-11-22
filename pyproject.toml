@@ -16,6 +16,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "langchain-mistralai>=1.2.0",
     "langgraph>=1.2.24",
+    "langsmith>=0.15.1",
     "mistral-common>=1.13.1",
     "mistralai>=3.7.0",
     "openai-harmony>=0.0.8",
