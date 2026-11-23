@@ -5,6 +5,7 @@ import re
 import subprocess
 from collections.abc import Iterator
 from dataclasses import dataclass
+from itertools import pairwise
 from pathlib import Path
 
 # Extensions reconnues à l’ingestion, indépendamment de la casse.
@@ -13,6 +14,7 @@ SUPPORTED = {".pdf", ".txt", ".md"}
 ARTICLE = re.compile(
     r"(?im)^[ \t]*(?:art(?:icle)?\.?[ \t]+(?:\d|premier\b|unique\b))"
 )
+CUT_PATTERNS = tuple(re.compile(pattern) for pattern in (r"\n\s*\n", r"[.!?]\s+", r"\n", r"\s+"))
 
 
 @dataclass(frozen=True)
@@ -58,26 +60,22 @@ def split_text(text: str, size: int, overlap: int) -> Iterator[str]:
         raise ValueError("Chunk settings must satisfy 0 <= overlap < size.")
     # Délimite les sections avec les débuts d’articles et les deux bords du texte.
     boundaries = [0, *(m.start() for m in ARTICLE.finditer(text) if m.start()), len(text)]
-    for left, right in zip(boundaries, boundaries[1:]):
-        # Isole la section et initialise start, le début de la fenêtre dans cette section.
+    for left, right in pairwise(boundaries):
         section = text[left:right].strip()
         start = 0
         while start < len(section):
-            # Place la fin au plus loin dans la limite de taille autorisée.
             end = min(start + size, len(section))
             if end < len(section):
                 # Cherche une coupure dans la seconde moitié et garantit que la fenêtre avance malgré le recouvrement.
                 minimum = start + max(size // 2, overlap + 1)
                 # Préfère un paragraphe, puis une phrase, une ligne ou un espace.
-                for pattern in (r"\n\s*\n", r"[.!?]\s+", r"\n", r"\s+"):
-                    # Recense les positions possibles pour le type de coupure courant.
-                    cuts = list(re.finditer(pattern, section[minimum:end]))
-                    if cuts:
-                        end = minimum + cuts[-1].end()
+                for pattern in CUT_PATTERNS:
+                    cut_end = max((cut.end() for cut in pattern.finditer(section, minimum, end)), default=0)
+                    if cut_end:
+                        end = cut_end
                         break
             chunk = section[start:end].strip()
             if chunk:
-                # Fournit le prochain passage non vide au code qui parcourt le générateur.
                 yield chunk
             if end == len(section):
                 break
@@ -117,6 +115,7 @@ def load_chunks(root: Path, size: int, overlap: int) -> tuple[list[Chunk], list[
                 # Précise la page dans le signalement lorsqu’un numéro est disponible.
                 location = f"{source}, p. {page}" if page is not None else source
                 issues.append(f"{location}: no extractable text")
+                continue
             for number, part in enumerate(split_text(text, size, overlap), 1):
                 # Combine chemin, page, position et texte pour distinguer les passages.
                 # Le préfixe de l’empreinte SHA-256 forme l’identifiant stocké avec le passage.

@@ -62,9 +62,9 @@ def demarrer(body: dict) -> dict:
     if fournisseur not in FOURNISSEURS:
         raise ValueError(f"Fournisseur inconnu : {fournisseur}")
     thread_id = str(uuid.uuid4())
-    _sessions[thread_id] = fournisseur
     config = {"configurable": {"thread_id": thread_id}, "tags": ["web", fournisseur]}
     out = _graphe(fournisseur).invoke({"messages": [("user", recit)]}, config)
+    _sessions[thread_id] = fournisseur
     return {"thread_id": thread_id, "provider": fournisseur, **_etat(out)}
 
 
@@ -121,22 +121,20 @@ ROUTES_POST = {"/api/start": demarrer, "/api/resume": reprendre, "/api/research"
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _json(self, status: int, payload: dict) -> None:
-        data = json.dumps(payload, ensure_ascii=False).encode()
+    def _respond(self, status: int, content_type: str, data: bytes) -> None:
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
 
+    def _json(self, status: int, payload: dict) -> None:
+        self._respond(status, "application/json; charset=utf-8", json.dumps(payload, ensure_ascii=False).encode())
+
     def do_GET(self) -> None:
         if self.path in ("/", "/index.html"):
             data = (ICI / "index.html").read_bytes()
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+            self._respond(HTTPStatus.OK, "text/html; charset=utf-8", data)
         elif self.path == "/api/stories":
             self._json(HTTPStatus.OK, recits())
         elif self.path == "/api/providers":

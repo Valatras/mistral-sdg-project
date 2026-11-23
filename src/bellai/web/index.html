@@ -198,7 +198,7 @@ function handle(d) {
 async function start() {
   const recit = $("recit").value.trim();
   if (!recit) return showError("Écrivez d’abord un récit.");
-  reset(false); showError(null); addMsg("Vous", esc(recit), "user");
+  reset(false); addMsg("Vous", esc(recit), "user");
   const s = stories.find((x) => x.id === $("preset").value);
   pendingAnswers = s ? [...s.reponses] : [];
   busy(true, "Extraction en cours…");

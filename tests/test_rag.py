@@ -11,6 +11,7 @@ from bellai.agents.legal_research_agent.documents import Chunk, load_chunks, spl
 from bellai.agents.legal_research_agent.index import Match, build_index, load_index, retrieve
 from bellai.agents.intake_agent import build_graph
 from bellai.agents.intake_agent.__main__ import main as intake_main
+from bellai.agents.intake_agent.rag_context import construire_contexte_rag
 from bellai.agents.intake_agent.schema import CaseFile
 from bellai.agents.legal_research_agent import research
 from bellai.config import CLAUDE_INTAKE_MODEL, EMBEDDING_MODEL
@@ -46,6 +47,10 @@ class RagTests(unittest.TestCase):
         )
         self.assertEqual(list(split_text("abcdefghijklmnop", 8, 2)),
                          ["abcdefgh", "ghijklmn", "mnop"])
+        self.assertEqual(
+            list(split_text("abc.def. ghi\n\njklmnop", 14, 0)),
+            ["abc.def. ghi", "jklmnop"],
+        )
         with self.assertRaises(ValueError):
             list(split_text("text", 10, 10))
 
@@ -108,6 +113,13 @@ class RagTests(unittest.TestCase):
             self.assertEqual(len(findings), 1)
             self.assertEqual(findings[0].sources, {"S1": chunk})
             self.assertEqual(json.loads(chat.call_args.args[1])["response_language"], "nl")
+
+    def test_context_keeps_regional_order_without_duplicates(self):
+        case = CaseFile(cas_usage=["chomage", "embauche"], region_domicile="flandre")
+        self.assertEqual(
+            construire_contexte_rag(case)["niveaux"],
+            ["ue", "federal", "flandre", "wallonie", "bruxelles", "communaute_germanophone"],
+        )
 
     def test_cli_combines_claude_intake_with_chroma_research(self):
         case = CaseFile(questions_juridiques=["Quel préavis ?"])
