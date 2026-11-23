@@ -19,8 +19,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langgraph.types import Command
 
-from ..RAG.answer import format_source
-from ..RAG.index import DEFAULT_INDEX
+from ..agents.legal_research_agent.answer import format_source
+from ..agents.legal_research_agent.index import DEFAULT_INDEX
 from ..agents.intake_agent import build_graph
 from ..agents.intake_agent.graph import FOURNISSEURS, extracteur_pour
 from ..agents.legal_research_agent import research

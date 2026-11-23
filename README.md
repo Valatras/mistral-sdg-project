@@ -162,6 +162,8 @@ Le corpus contient le chemin source et, pour les PDF, le numéro de page. Les in
 
 ## Legal research agent
 
+Le code RAG se trouve dans `src/bellai/agents/legal_research_agent/`. Le module `documents.py` extrait et découpe les documents, `index.py` gère l’index Chroma et la recherche de passages, et `answer.py` génère les réponses et leurs citations. Ces modules sont utilisés par les commandes `ingest` et `ask` ainsi que par le parcours de recherche après l’intake.
+
 Après l’ingestion, lancer le parcours interactif complet :
 
 ```sh

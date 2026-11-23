@@ -13,8 +13,8 @@ from chromadb.errors import ChromaError
 from dotenv import load_dotenv
 from langgraph.types import Command
 
-from ...RAG.answer import format_source
-from ...RAG.index import DEFAULT_INDEX
+from ..legal_research_agent.answer import format_source
+from ..legal_research_agent.index import DEFAULT_INDEX
 from ...config import LEGAL_RESEARCH_MODEL, Models
 from ..legal_research_agent import research
 from . import build_graph

@@ -7,9 +7,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from chromadb.errors import ChromaError
 
-from .RAG.answer import format_source, generate_answer
-from .RAG.documents import load_chunks
-from .RAG.index import DEFAULT_INDEX, build_index, load_index, retrieve
+from .agents.legal_research_agent.answer import format_source, generate_answer
+from .agents.legal_research_agent.documents import load_chunks
+from .agents.legal_research_agent.index import DEFAULT_INDEX, build_index, load_index, retrieve
 from .config import RAG_ANSWER_MODEL, Models
 
 

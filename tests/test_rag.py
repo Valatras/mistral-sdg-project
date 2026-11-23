@@ -6,9 +6,9 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from bellai.RAG.answer import format_source, generate_answer
-from bellai.RAG.documents import Chunk, load_chunks, split_text
-from bellai.RAG.index import Match, build_index, load_index, retrieve
+from bellai.agents.legal_research_agent.answer import format_source, generate_answer
+from bellai.agents.legal_research_agent.documents import Chunk, load_chunks, split_text
+from bellai.agents.legal_research_agent.index import Match, build_index, load_index, retrieve
 from bellai.agents.intake_agent import build_graph
 from bellai.agents.intake_agent.__main__ import main as intake_main
 from bellai.agents.intake_agent.schema import CaseFile
@@ -27,7 +27,7 @@ class RagTests(unittest.TestCase):
             (root / "broken.pdf").touch()
             (root / "ignored.csv").touch()
             extracted = Mock(stdout="Page une\f\fPage trois\f".encode())
-            with patch("bellai.RAG.documents.subprocess.run", return_value=extracted):
+            with patch("bellai.agents.legal_research_agent.documents.subprocess.run", return_value=extracted):
                 chunks, issues = load_chunks(root, 100, 15)
                 self.assertEqual(chunks, load_chunks(root, 100, 15)[0])
             self.assertIn(("nested/text.txt", None), [(c.source, c.page) for c in chunks])
@@ -35,7 +35,7 @@ class RagTests(unittest.TestCase):
             self.assertIn("sample.PDF, p. 2: no extractable text", issues)
             self.assertIn("ignored.csv: unsupported format", issues)
             self.assertEqual(len({c.id for c in chunks}), len(chunks))
-            with patch("bellai.RAG.documents.subprocess.run", side_effect=FileNotFoundError):
+            with patch("bellai.agents.legal_research_agent.documents.subprocess.run", side_effect=FileNotFoundError):
                 _, failures = load_chunks(root, 100, 15)
             self.assertIn("broken.pdf: extraction failed", "\n".join(failures))
 

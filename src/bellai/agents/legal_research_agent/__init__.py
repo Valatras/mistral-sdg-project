@@ -1,13 +1,18 @@
-"""Research the legal questions prepared by the intake agent."""
+"""Local document retrieval and grounded answers for legal research."""
+
+from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ...RAG.answer import generate_answer
-from ...RAG.documents import Chunk
-from ...RAG.index import DEFAULT_INDEX, Embed, load_index, retrieve
-from ..intake_agent.rag_context import ContexteRAG
+from .answer import generate_answer
+from .documents import Chunk
+from .index import DEFAULT_INDEX, Embed, load_index, retrieve
+
+if TYPE_CHECKING:
+    from ..intake_agent.rag_context import ContexteRAG
 
 
 @dataclass(frozen=True)
